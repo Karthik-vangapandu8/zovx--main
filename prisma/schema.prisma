@@ -1,0 +1,209 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(EDITOR)
+  avatar    String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  articles Article[]
+  tools    Tool[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String @id @default(cuid())
+  name        String @unique // e.g., "Manufacturing", "Healthcare", "SaaS"
+  slug        String @unique
+  description String?
+  color       String? // For UI theming
+  icon        String? // Icon name for display
+  
+  // Relations
+  articles Article[]
+  tools    Tool[]
+
+  @@map("categories")
+}
+
+model Article {
+  id               String        @id @default(cuid())
+  title            String
+  slug             String        @unique
+  excerpt          String
+  content          String        @db.Text
+  featuredImage    String?
+  status           ArticleStatus @default(DRAFT)
+  featured         Boolean       @default(false)
+  trending         Boolean       @default(false)
+  
+  // SEO
+  metaTitle        String?
+  metaDescription  String?
+  
+  // Metrics
+  views            Int           @default(0)
+  readTime         Int           // in minutes
+  
+  // Business Metrics
+  savings          String?       // e.g., "$2M"
+  timeframe        String?       // e.g., "Monthly", "Annual"
+  roi              String?       // e.g., "8000%"
+  implementationTime String?     // e.g., "12 weeks"
+  difficulty       Difficulty    @default(MEDIUM)
+  
+  // Challenge/Solution/Results
+  challenge        String        @db.Text
+  solution         String[]      // Array of solution points
+  results          Json          // Flexible JSON for before/after metrics
+  
+  // Timestamps
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  publishedAt      DateTime?
+  
+  // Relations
+  authorId         String
+  author           User          @relation(fields: [authorId], references: [id])
+  categoryId       String
+  category         Category      @relation(fields: [categoryId], references: [id])
+  tags             Tag[]         @relation("ArticleTags")
+  tools            Tool[]        @relation("ArticleTools")
+  company          Company?      @relation(fields: [companyId], references: [id])
+  companyId        String?
+
+  @@map("articles")
+}
+
+model Tool {
+  id               String      @id @default(cuid())
+  name             String
+  slug             String      @unique
+  description      String
+  longDescription  String?     @db.Text
+  website          String?
+  logo             String?
+  pricing          String?     // e.g., "$20/month"
+  
+  // Affiliate
+  affiliateUrl     String?
+  commission       String?     // e.g., "30%"
+  
+  // Ratings
+  rating           Float?      @default(0)
+  userRating       Float?      @default(0)
+  
+  // Features
+  features         String[]
+  useCases         String[]
+  integrations     String[]
+  
+  // Metrics
+  views            Int         @default(0)
+  clicks           Int         @default(0)
+  
+  // Timestamps
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  // Relations
+  categoryId       String
+  category         Category    @relation(fields: [categoryId], references: [id])
+  addedById        String
+  addedBy          User        @relation(fields: [addedById], references: [id])
+  articles         Article[]   @relation("ArticleTools")
+  tags             Tag[]       @relation("ToolTags")
+
+  @@map("tools")
+}
+
+model Company {
+  id          String @id @default(cuid())
+  name        String
+  industry    String
+  size        String? // e.g., "500 employees"
+  website     String?
+  logo        String?
+  description String?
+  
+  // Relations
+  articles    Article[]
+  
+  @@map("companies")
+}
+
+model Tag {
+  id       String @id @default(cuid())
+  name     String @unique
+  slug     String @unique
+  color    String?
+  
+  // Relations
+  articles Article[] @relation("ArticleTags")
+  tools    Tool[]    @relation("ToolTags")
+  
+  @@map("tags")
+}
+
+model Newsletter {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  company   String?
+  industry  String?
+  subscribed Boolean  @default(true)
+  createdAt DateTime @default(now())
+  
+  @@map("newsletter")
+}
+
+model Analytics {
+  id          String   @id @default(cuid())
+  type        String   // "article_view", "tool_click", "email_signup", etc.
+  resourceId  String?  // Article ID, Tool ID, etc.
+  data        Json?    // Additional metadata
+  userAgent   String?
+  ipAddress   String?
+  referrer    String?
+  createdAt   DateTime @default(now())
+  
+  @@map("analytics")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  AUTHOR
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
